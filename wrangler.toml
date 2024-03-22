@@ -49,3 +49,5 @@ compatibility_date = "2024-02-08"
 # [[migrations]]
 # tag = "v1"
 # new_classes = ["MyDurableObject"]
+
+compatibility_flags = [ "nodejs_compat" ]

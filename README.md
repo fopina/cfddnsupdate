@@ -15,16 +15,50 @@ This firmware allows us to set a `custom` server for DynDNS but it will call it 
 
 ## Usage
 
+This worker is live at https://cfddnsupdate.fopina.workers.dev/
+
+It follows the same interface as mentioned in [dynu.com](https://www.dynu.com/DynamicDNS/IP-Update-Protocol) or [dyn.com](https://help.dyn.com/remote-access-api/perform-update/).
+
+Your router/device should be configured as
+* **Hostname**: cfddnsupdate.fopina.workers.dev
+* **HTTP port**: 80
+* **HTTPS port**: 443
+* **Path** (anything works actually): /nic/update
+* **Username**: your cloudflare zone ID
+* **Password**: your API token (**NOT** the Global API key)
+
+**Zone ID** is visible in the main page of your zone, on the right side bar under `API`.  
+**API token** is **NOT** the Global API key (avoid using that in 3rd party services). Click `Get your API token` and then create one with `Zone DNS Edit` permissions, that's all it takes. You can also restrict it to the zone you'll be using.
+
+Sample HTTP request (cURL syntax) to update IP
+```
+curl https://cfddnsupdate.fopina.workers.dev/nic/update?hostname=subdomain.example.com&myip=1.1.1.1 \
+     -u <zone ID>:<API token>
+```
+
+### Update parameters
+
+| Field | Description |
+| ----- | ----------- |
+| hostname | Hostname that you wish to update. **This is a required field.**|
+| myip | IP address to set for the update. |
+| wildcard | *currently ignored* |
+| offline | *currently ignored* |
+
+
+### Router setup
+
+In order to use this in a Thompson TG789 router, you have to `telnet` into it and execute
+
+```
 dyndns service modify name=custom server=cfddnsupdate.fopina.workers.dev port=80 updateinterval=3600
+```
 
+`updateinterval` in the example is set to update IP every hour.
 
+Then, via UI under Dynamic DNS, you add username (zone ID), password (API token) and choose the hostname to update.
 
-
-/nic/update?system=custom&hostname=xxx.ddns.net&myip=1.2.3.4&wildcard=OFF&offline=NO
-
-
-copy table from https://help.dyn.com/remote-access-api/perform-update/ `Raw HTTP GET Request`
-
+> PRs with instructions to other routers are very welcome
 
 ## Development
 

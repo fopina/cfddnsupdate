@@ -70,3 +70,7 @@ npm run dev
 ```
 
 That's all that's needed to have a local instance up and running. Then `npm run deploy` (and follow the steps) if you want to deploy your own copy.
+
+
+openssl genrsa -out a.txt 2048
+openssl rsa -pubout -in a.txt

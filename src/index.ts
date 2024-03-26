@@ -1,6 +1,7 @@
 import { Buffer } from 'node:buffer';
 
 export interface Env {
+	tests string;
 }
 
 const RECORD_TYPE = "A"
@@ -38,6 +39,7 @@ export default {
 		 * RECORD_NAME in `hostname` parameter
 		 * RECORD_CONTANT in `myip` parameter
 		 */
+		crypto.subtle.importKey()
 		const url = new URL(request.url);
 		const recordName = url.searchParams.get("hostname");
 		const recordContent = url.searchParams.get("myip");

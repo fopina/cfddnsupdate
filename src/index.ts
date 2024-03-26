@@ -84,8 +84,8 @@ export default {
 			headers: headers,
 			body: body
 		}
-		if (existingRecords['result']) {
-			const recordId = existingRecords['result'][0];
+		const recordId = existingRecords['result'][0];
+		if (recordId !== undefined) {
 			if (recordId['content'] == recordContent) return new Response('Already up to date');
 			updateUrl = `${apiUrl}/${recordId['id']}`;
 			updateInit.method = 'PATCH';

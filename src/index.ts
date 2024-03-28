@@ -1,7 +1,8 @@
 import { Buffer } from 'node:buffer';
 
 export interface Env {
-	tests string;
+	PRIVATE_KEY: string
+	PUBLIC_KEY: string
 }
 
 const RECORD_TYPE = "A"
@@ -39,7 +40,19 @@ export default {
 		 * RECORD_NAME in `hostname` parameter
 		 * RECORD_CONTANT in `myip` parameter
 		 */
-		crypto.subtle.importKey()
+		// based off https://mdn.github.io/dom-examples/web-crypto/import-key/spki.js
+		// const k = await crypto.subtle.importKey("pkcs8", new TextEncoder().encode(atob(env.PRIVATE_KEY)), {name: "RSA-OAEP", hash: "SHA-256"}, false, ["decrypt"])
+		function str2ab(str: string) {
+			const buf = new ArrayBuffer(str.length);
+			const bufView = new Uint8Array(buf);
+			for (let i = 0, strLen = str.length; i < strLen; i++) {
+			  bufView[i] = str.charCodeAt(i);
+			}
+			return buf;
+		  }
+		const k = await crypto.subtle.importKey("spki", str2ab(atob(env.PUBLIC_KEY)), {name: "RSA-OAEP", hash: "SHA-256"}, true, ["encrypt"])
+		const s = await crypto.subtle.encrypt("RSA-OAEP", k, new TextEncoder().encode("hello"));
+		return new Response(btoa(new TextDecoder("ascii").decode(s)))
 		const url = new URL(request.url);
 		const recordName = url.searchParams.get("hostname");
 		const recordContent = url.searchParams.get("myip");

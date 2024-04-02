@@ -30,30 +30,7 @@ export default {
 		return [null, user, pass]
 	},
 
-	async update(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-		/**
-		 * Handle /nic/update?system=custom&hostname=whatever.ddns.net&myip=1.2.3.4&wildcard=OFF&offline=NO
-		 * ZONEID in basic auth username
-		 * API_TOKEN (not global key) in basic auth password
-		 * RECORD_NAME in `hostname` parameter
-		 * RECORD_CONTANT in `myip` parameter
-		 */
-		const url = new URL(request.url);
-		const recordName = url.searchParams.get("hostname");
-		const recordContent = url.searchParams.get("myip");
-		const [authParsed, zoneId, apiToken] = this.parseAuthorization(request);
-		if (authParsed !== null) return authParsed;
-		if (!recordName) return new Response("Missing hostname", { status: 400 })
-
-		const apiUrl = `https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records`;
-		const headers = {
-			// TODO: add global key option - email to be set somewhere?!
-			// 'X-Auth-Email': '',
-			// 'X-Auth-Key': 'GLOBAL KEY',
-			'Authorization': `Bearer ${apiToken}`,
-			'Content-Type': 'application/json',
-		};
-
+	async updateRecord(apiUrl: string, headers: any, recordName: string, recordContent: string): Promise<String> {
 		const body = JSON.stringify({
 			type: RECORD_TYPE,
 			name: recordName,
@@ -74,7 +51,7 @@ export default {
 		if (!listResponse.ok) {
 			console.error(`Failed to list DNS records: ${recordName}, Status: ${listResponse.status}`);
 			console.error(`Message: ${await listResponse.text()}`);
-			return new Response('Failed to list DNS records', { status: 500 });
+			return "badauth"
 		}
 
 		const existingRecords: any = await listResponse.json();
@@ -86,7 +63,7 @@ export default {
 		}
 		const recordId = existingRecords['result'][0];
 		if (recordId !== undefined) {
-			if (recordId['content'] == recordContent) return new Response('Already up to date');
+			if (recordId['content'] == recordContent) return `nochg ${recordContent}`;
 			updateUrl = `${apiUrl}/${recordId['id']}`;
 			updateInit.method = 'PATCH';
 		}
@@ -96,13 +73,46 @@ export default {
 		// Handle response
 		if (response.ok) {
 			console.log(`Successfully updated DNS record: ${recordName}`);
+			return `good ${recordContent}`;
 		} else {
 			const error = await response.text();
 			console.error(`Failed to update DNS record: ${recordName}, Status: ${response.status}`);
 			console.error(`Message: ${error}`);
-			return new Response(`Failed to update: ${error}`, {status: response.status});
+			return `911`;
 		}
-		return new Response('Done');
+	},
+
+	async update(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+		/**
+		 * Handle /nic/update?system=custom&hostname=whatever.ddns.net&myip=1.2.3.4&wildcard=OFF&offline=NO
+		 * ZONEID in basic auth username
+		 * API_TOKEN (not global key) in basic auth password
+		 * RECORD_NAME in `hostname` parameter
+		 * RECORD_CONTANT in `myip` parameter
+		 */
+		const url = new URL(request.url);
+		const hostnames = url.searchParams.get("hostname");
+		const recordContent = url.searchParams.get("myip") || "";
+		const [authParsed, zoneId, apiToken] = this.parseAuthorization(request);
+		// no-ip always uses code 200 for any message :shrug:
+		if (authParsed !== null) return new Response("badauth")
+		if (!hostnames) return new Response("nohost")
+
+		const apiUrl = `https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records`;
+		const headers = {
+			// TODO: add global key option - email to be set somewhere?!
+			// 'X-Auth-Email': '',
+			// 'X-Auth-Key': 'GLOBAL KEY',
+			'Authorization': `Bearer ${apiToken}`,
+			'Content-Type': 'application/json',
+		};
+
+		const s = await Promise.all(
+			hostnames.split(",").map(
+				async recordName => await this.updateRecord(apiUrl, headers, recordName, recordContent)
+			)
+		);
+		return new Response(s.join("\n"))
 	},
 
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
